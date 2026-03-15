@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true">
+    <extensions>
+        <bootstrap class="GetSkipper\PHPUnit\SkipperExtension">
+            <parameter name="spreadsheetId" value="1Nbjfhklw11uVbi6OCOSeCJI_PThJYzQLlZQbThb4Zvs"/>
+            <parameter name="credentialsEnvVar" value="GOOGLE_CREDS_B64"/>
+            <parameter name="sheetName" value="skipper-php"/>
+        </bootstrap>
+    </extensions>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+</phpunit>

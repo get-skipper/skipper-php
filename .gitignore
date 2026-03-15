@@ -1,0 +1,13 @@
+/vendor/
+/composer.lock
+
+# Credentials — never commit
+service-account-*.json
+.env
+
+# PHP CS Fixer cache
+.php-cs-fixer.cache
+
+# PHPUnit cache
+.phpunit.cache/
+.phpunit.result.cache
