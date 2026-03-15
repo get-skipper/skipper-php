@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace GetSkipper\Core\Resolver;
 
+use GetSkipper\Core\Client\ExcelClient;
 use GetSkipper\Core\Client\SheetsClient;
+use GetSkipper\Core\Config\ExcelConfig;
 use GetSkipper\Core\Config\SkipperConfig;
+use GetSkipper\Core\Credentials\AzureBase64Credentials;
 use GetSkipper\Core\Credentials\Base64Credentials;
 use GetSkipper\Core\SkipperMode;
 use GetSkipper\Core\TestId\TestIdHelper;
@@ -28,16 +31,18 @@ final class SkipperResolver
      */
     private array $cache = [];
     private bool $initialized = false;
-    private readonly SheetsClient $client;
+    private readonly SheetsClient|ExcelClient $client;
 
     public function __construct(
-        private readonly SkipperConfig $config,
+        private readonly SkipperConfig|ExcelConfig $config,
     ) {
-        $this->client = new SheetsClient($config);
+        $this->client = $config instanceof ExcelConfig
+            ? new ExcelClient($config)
+            : new SheetsClient($config);
     }
 
     /**
-     * Fetches the spreadsheet and populates the in-memory cache.
+     * Fetches the spreadsheet / workbook and populates the in-memory cache.
      * Must be called once before isTestEnabled().
      */
     public function initialize(): void

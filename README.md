@@ -5,7 +5,7 @@
 [![PHP](https://img.shields.io/packagist/php-v/get-skipper/skipper-php.svg)](https://packagist.org/packages/get-skipper/skipper-php)
 [![License](https://img.shields.io/packagist/l/get-skipper/skipper-php.svg)](LICENSE)
 
-Test-gating for PHP via Google Spreadsheet. Enable or disable tests without changing code — just update a date in a Google Sheet.
+Test-gating for PHP via Google Sheets or Excel on Office 365. Enable or disable tests without changing code — just update a date in a spreadsheet.
 
 A PHP port of [get-skipper/skipper](https://github.com/get-skipper/skipper), supporting PHPUnit, Pest, Behat, Codeception, PHPSpec, and Kahlan.
 
@@ -13,7 +13,7 @@ A PHP port of [get-skipper/skipper](https://github.com/get-skipper/skipper), sup
 
 ## How it works
 
-A Google Spreadsheet stores test IDs with optional `disabledUntil` dates:
+A spreadsheet (Google Sheets or Excel on Office 365) stores test IDs with optional `disabledUntil` dates:
 
 | testId | disabledUntil | notes |
 |--------|---------------|-------|
@@ -72,19 +72,61 @@ composer require --dev kahlan/kahlan
 
 ---
 
+## Excel / Office 365 setup
+
+1. Create an Excel workbook (`.xlsx`) in OneDrive or SharePoint with columns `testId`, `disabledUntil`, `notes` in row 1.
+
+2. Register an Azure AD application:
+   - [Azure Portal](https://portal.azure.com) → **Azure Active Directory → App registrations → New registration**
+   - Note the **Application (client) ID** and **Directory (tenant) ID**
+   - **Certificates & secrets → New client secret** — copy the Value immediately
+
+3. Grant Microsoft Graph API permissions:
+   - **API permissions → Add a permission → Microsoft Graph → Application permissions**
+   - Add `Files.ReadWrite.All` (OneDrive) or `Sites.ReadWrite.All` (SharePoint)
+   - Click **Grant admin consent for {tenant}**
+
+4. Share the workbook folder/drive with the app's service principal (**Edit** role for sync mode, **Read** for read-only).
+
+5. Find the `workbookId` via [Graph Explorer](https://developer.microsoft.com/graph/graph-explorer):
+   ```
+   GET https://graph.microsoft.com/v1.0/drives/{driveId}/root/children
+   ```
+   The `workbookId` is `"drives/{driveId}/items/{itemId}"` (copy from the response).
+
+---
+
 ## Credentials
 
-Three formats are accepted for all integrations:
+### Google Sheets credentials
 
-| Format | Parameter | Use case |
-|--------|-----------|----------|
-| File path | `credentialsFile: './service-account.json'` | Local development |
-| Base64 string | `credentialsBase64: 'eyJ0eX...'` | CI/CD inline secret |
-| Environment variable | `credentialsEnvVar: 'GOOGLE_CREDS_B64'` | CI/CD env var (base64) |
+Three formats are accepted:
+
+| Format | Class | Use case |
+|--------|-------|----------|
+| File path | `FileCredentials('./service-account.json')` | Local development |
+| Base64 string | `Base64Credentials('eyJ0eX...')` | CI/CD inline secret |
+| Environment variable | `Base64Credentials((string) getenv('GOOGLE_CREDS_B64'))` | CI/CD env var (base64) |
 
 To encode your credentials file for CI:
 ```bash
-base64 -i service-account.json
+base64 -i service-account.json | tr -d '\n'
+```
+
+### Excel / Office 365 credentials
+
+Three formats are accepted (JSON contains `tenantId`, `clientId`, `clientSecret`):
+
+| Format | Class | Use case |
+|--------|-------|----------|
+| Inline | `AzureClientSecretCredentials($tenantId, $clientId, $clientSecret)` | Simple / hardcoded |
+| File path | `AzureFileCredentials('./azure-creds.json')` | Local development |
+| Base64 string | `AzureBase64Credentials((string) getenv('AZURE_CREDS_B64'))` | CI/CD env var (base64) |
+
+To encode your Azure credentials file for CI:
+```bash
+# azure-creds.json: {"tenantId":"...","clientId":"...","clientSecret":"..."}
+base64 -i azure-creds.json | tr -d '\n'
 ```
 
 ---
@@ -93,7 +135,7 @@ base64 -i service-account.json
 
 ### PHPUnit (10 / 11 / 12)
 
-Add to `phpunit.xml`:
+**Google Sheets** — add to `phpunit.xml`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -123,6 +165,23 @@ Add to `phpunit.xml`:
 </phpunit>
 ```
 
+**Excel / Office 365** — use `ExcelConfig` instead:
+
+```xml
+  <extensions>
+    <bootstrap class="GetSkipper\PHPUnit\SkipperExtension">
+      <parameter name="source" value="excel"/>
+      <parameter name="workbookId" value="drives/YOUR_DRIVE_ID/items/YOUR_ITEM_ID"/>
+
+      <!-- Choose one credentials option: -->
+      <parameter name="credentialsEnvVar" value="AZURE_CREDS_B64"/>
+      <!-- <parameter name="credentialsFile" value="./azure-creds.json"/> -->
+
+      <parameter name="sheetName" value="MySheet"/>  <!-- optional -->
+    </bootstrap>
+  </extensions>
+```
+
 **Test ID format:**
 ```
 tests/Unit/AuthTest.php > AuthTest > testItCanLogin
@@ -143,23 +202,29 @@ tests/Feature/auth.php > Auth > can login      ← with describe() block
 
 **Alternative: hook-based setup via `tests/Pest.php`**
 
-Use this if you prefer Pest-native configuration instead of `phpunit.xml`:
-
 ```php
 <?php
 // tests/Pest.php
 
+use GetSkipper\Core\Config\ExcelConfig;
 use GetSkipper\Core\Config\SkipperConfig;
+use GetSkipper\Core\Credentials\AzureBase64Credentials;
 use GetSkipper\Core\Credentials\Base64Credentials;
 use GetSkipper\Core\Credentials\FileCredentials;
 use GetSkipper\Pest\Plugin;
 
-// Choose one credentials option:
+// Google Sheets
 Plugin::skipperSetup(new SkipperConfig(
     spreadsheetId: 'YOUR_SPREADSHEET_ID',
     credentials: new FileCredentials('./service-account.json'),
-    // credentials: new Base64Credentials('eyJ0eXBlIjoic2VydmljZV9hY2NvdW50Ii4uLn0='),
     // credentials: new Base64Credentials((string) getenv('GOOGLE_CREDS_B64')),
+    sheetName: 'MySheet', // optional
+));
+
+// OR — Excel / Office 365
+Plugin::skipperSetup(new ExcelConfig(
+    workbookId: 'drives/YOUR_DRIVE_ID/items/YOUR_ITEM_ID',
+    credentials: new AzureBase64Credentials((string) getenv('AZURE_CREDS_B64')),
     sheetName: 'MySheet', // optional
 ));
 ```
@@ -264,20 +329,28 @@ In `kahlan-config.php`:
 <?php
 // kahlan-config.php
 
+use GetSkipper\Core\Config\ExcelConfig;
 use GetSkipper\Core\Config\SkipperConfig;
+use GetSkipper\Core\Credentials\AzureBase64Credentials;
 use GetSkipper\Core\Credentials\Base64Credentials;
 use GetSkipper\Core\Credentials\FileCredentials;
 use GetSkipper\Kahlan\SkipperPlugin;
 
 $config->beforeAll(function () {
-    // Choose one credentials option:
+    // Google Sheets
     SkipperPlugin::setup(new SkipperConfig(
         spreadsheetId: 'YOUR_SPREADSHEET_ID',
         credentials: new FileCredentials('./service-account.json'),
-        // credentials: new Base64Credentials('eyJ0eXBlIjoic2VydmljZV9hY2NvdW50Ii4uLn0='),
         // credentials: new Base64Credentials((string) getenv('GOOGLE_CREDS_B64')),
         sheetName: 'MySheet', // optional
     ));
+
+    // OR — Excel / Office 365
+    // SkipperPlugin::setup(new ExcelConfig(
+    //     workbookId: 'drives/YOUR_DRIVE_ID/items/YOUR_ITEM_ID',
+    //     credentials: new AzureBase64Credentials((string) getenv('AZURE_CREDS_B64')),
+    //     sheetName: 'MySheet',
+    // ));
 });
 
 // Check tests globally (all specs in all directories):
@@ -334,6 +407,7 @@ sync:
       env:
         SKIPPER_MODE: sync
         GOOGLE_CREDS_B64: ${{ secrets.GOOGLE_CREDS_B64 }}
+        # OR for Excel: AZURE_CREDS_B64: ${{ secrets.AZURE_CREDS_B64 }}
 ```
 
 This ensures the spreadsheet is always up to date with the current test suite on `main`. The sync job is skipped on pull requests and on branches other than `main`.
@@ -392,20 +466,24 @@ The repository ships with a workflow at `.github/workflows/tests.yml` that runs 
 
 ### Required secret
 
-The `SKIPPER_CACHE_FILE` pattern is used internally between processes, but the initial extension bootstrap always needs credentials to build the config. Add your service account credentials as a GitHub Actions secret:
+Add your credentials as a GitHub Actions secret:
 
+**Google Sheets:**
 1. Go to your repository → **Settings** → **Secrets and variables** → **Actions**
-2. Click **New repository secret**
-3. Name: `GOOGLE_CREDS_B64`
-4. Value: output of `base64 -i service-account.json`
+2. Name: `GOOGLE_CREDS_B64` — Value: output of `base64 -i service-account.json`
 
-The workflow passes this secret as an environment variable:
+**Excel / Office 365:**
+1. Create `azure-creds.json`: `{"tenantId":"...","clientId":"...","clientSecret":"..."}`
+2. Name: `AZURE_CREDS_B64` — Value: output of `base64 -i azure-creds.json`
+
+The workflow passes the secret as an environment variable:
 
 ```yaml
 - name: Run tests
   run: composer test
   env:
     GOOGLE_CREDS_B64: ${{ secrets.GOOGLE_CREDS_B64 }}
+    # OR for Excel: AZURE_CREDS_B64: ${{ secrets.AZURE_CREDS_B64 }}
 ```
 
 ### PHP version matrix
@@ -430,7 +508,7 @@ Ensure `composer.json` has the correct `name`, `description`, `license`, and `re
 ```json
 {
     "name": "get-skipper/skipper-php",
-    "description": "Test-gating via Google Spreadsheet for PHP test frameworks",
+    "description": "Test-gating via Google Sheets or Excel on Office 365 for PHP test frameworks",
     "license": "MIT",
     "require": {
         "php": ">=8.2",

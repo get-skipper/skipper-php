@@ -1,12 +1,14 @@
 {
     "name": "get-skipper/skipper-php",
-    "description": "Test-gating via Google Spreadsheet for PHP test frameworks",
+    "description": "Test-gating via Google Sheets or Excel on Office 365 for PHP test frameworks",
     "type": "library",
     "license": "MIT",
     "keywords": [
         "testing",
         "test-gating",
         "google-sheets",
+        "excel",
+        "office365",
         "phpunit",
         "pest",
         "behat",
@@ -33,7 +35,8 @@
         "behat/behat": "Required to use GetSkipper\\Behat integration (^3.12)",
         "codeception/codeception": "Required to use GetSkipper\\Codeception integration (^5.0)",
         "phpspec/phpspec": "Required to use GetSkipper\\PHPSpec integration (^7 || ^8)",
-        "kahlan/kahlan": "Required to use GetSkipper\\Kahlan integration (^5.0)"
+        "kahlan/kahlan": "Required to use GetSkipper\\Kahlan integration (^5.0)",
+        "guzzlehttp/guzzle": "Required for Excel / Office 365 integration (^7.0) — usually already present transitively via google/apiclient"
     },
     "autoload": {
         "psr-4": {
