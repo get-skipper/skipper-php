@@ -388,7 +388,7 @@ All test IDs are **case-insensitive** and **whitespace-collapsed** for compariso
 
 ## CI — GitHub Actions
 
-The repository ships with a workflow at `.github/workflows/tests.yml` that runs the test suite across PHP 8.1–8.4 and a linting job.
+The repository ships with a workflow at `.github/workflows/tests.yml` that runs the test suite across PHP 8.2–8.4 and a linting job.
 
 ### Required secret
 
@@ -416,7 +416,7 @@ The workflow tests against all supported PHP versions in parallel:
 strategy:
   fail-fast: false
   matrix:
-    php: ['8.1', '8.2', '8.3', '8.4']
+    php: ['8.2', '8.3', '8.4']
 ```
 
 ---
@@ -433,7 +433,7 @@ Ensure `composer.json` has the correct `name`, `description`, `license`, and `re
     "description": "Test-gating via Google Spreadsheet for PHP test frameworks",
     "license": "MIT",
     "require": {
-        "php": ">=8.1",
+        "php": ">=8.2",
         "google/apiclient": "^2.15"
     }
 }

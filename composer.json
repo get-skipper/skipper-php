@@ -15,7 +15,7 @@
         "kahlan"
     ],
     "require": {
-        "php": ">=8.1",
+        "php": ">=8.2",
         "google/apiclient": "^2.15"
     },
     "require-dev": {
