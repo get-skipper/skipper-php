@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-03-28
+
+### Changed
+- `SheetsClient` is no longer `final`, and both `SkipperResolver` and `SheetsWriter` now accept an optional `SheetsClient` constructor parameter, enabling injection of test doubles without a real Google API connection.
+
+### Added
+- Unit tests for `SKIPPER_FAIL_OPEN`, `SKIPPER_CACHE_TTL`, and `SKIPPER_SYNC_ALLOW_DELETE` (`SkipperResolverInitializeTest`, `SheetsWriterTest`).
+
 ## [1.1.0] - 2026-03-28
 
 ### Added
@@ -24,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Parallel test execution support via cross-process resolver cache (`SKIPPER_CACHE_FILE`, `SKIPPER_DISCOVERED_DIR`).
 - Three credential formats: file path, base64 string, environment variable.
 
-[Unreleased]: https://github.com/get-skipper/skipper-php/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/get-skipper/skipper-php/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/get-skipper/skipper-php/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/get-skipper/skipper-php/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/get-skipper/skipper-php/releases/tag/v1.0.0
