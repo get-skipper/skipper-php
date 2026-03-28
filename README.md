@@ -365,7 +365,10 @@ referenceSheets: ['SharedDisabled', 'QA']
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SKIPPER_MODE` | `read-only` | Set to `sync` to enable spreadsheet reconciliation |
-| `SKIPPER_CACHE_FILE` | _(auto)_ | Path to the resolver cache file (set by the main process) |
+| `SKIPPER_FAIL_OPEN` | `true` | On API failure with no valid cache, run all tests instead of crashing. Set to `false` to rethrow the exception |
+| `SKIPPER_CACHE_TTL` | `300` | Seconds the on-disk fallback cache (`.skipper-cache.json`) remains valid after a successful fetch |
+| `SKIPPER_SYNC_ALLOW_DELETE` | `false` | In sync mode, delete orphaned rows from the spreadsheet. When `false`, orphaned rows are only logged |
+| `SKIPPER_CACHE_FILE` | _(auto)_ | Path to the resolver cache file (set by the main process for parallel workers) |
 | `SKIPPER_DISCOVERED_DIR` | _(auto)_ | Directory for collecting discovered test IDs across workers |
 | `SKIPPER_DEBUG` | _(unset)_ | Set to any non-empty value to enable verbose logging |
 

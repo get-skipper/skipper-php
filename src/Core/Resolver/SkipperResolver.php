@@ -39,18 +39,80 @@ final class SkipperResolver
     /**
      * Fetches the spreadsheet and populates the in-memory cache.
      * Must be called once before isTestEnabled().
+     *
+     * On API failure:
+     * - Uses the on-disk fallback cache if within SKIPPER_CACHE_TTL seconds (default: 300).
+     * - If no valid cache exists and SKIPPER_FAIL_OPEN is not "false", runs all tests
+     *   instead of crashing (fail-open is the default).
+     * - If SKIPPER_FAIL_OPEN=false, the exception is rethrown.
      */
     public function initialize(): void
     {
-        $result = $this->client->fetchAll();
-        $this->cache = [];
+        $cacheFile = '.skipper-cache.json';
+        $ttl = (int)(getenv('SKIPPER_CACHE_TTL') ?: 300);
+        $failOpen = getenv('SKIPPER_FAIL_OPEN') !== 'false';
 
-        foreach ($result->entries as $entry) {
-            $key = TestIdHelper::normalize($entry->testId);
-            $this->cache[$key] = $entry->disabledUntil?->format(\DateTimeInterface::ATOM);
+        try {
+            $result = $this->client->fetchAll();
+            $this->cache = [];
+
+            foreach ($result->entries as $entry) {
+                $key = TestIdHelper::normalize($entry->testId);
+                $this->cache[$key] = $entry->disabledUntil?->format(\DateTimeInterface::ATOM);
+            }
+
+            file_put_contents($cacheFile, json_encode(['ts' => time(), 'rows' => $this->cache], \JSON_THROW_ON_ERROR));
+            $this->initialized = true;
+        } catch (\Exception $e) {
+            $cached = $this->tryReadCache($cacheFile, $ttl);
+            if ($cached !== null) {
+                error_log('[skipper] API failed, using cache (' . $cached['ageSeconds'] . 's old): ' . $e->getMessage());
+                $this->cache = $cached['rows'];
+                $this->initialized = true;
+                return;
+            }
+            if ($failOpen) {
+                error_log('[skipper] API failed, no cache — running all tests (fail-open): ' . $e->getMessage());
+                $this->cache = [];
+                $this->initialized = true;
+                return;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Reads the on-disk fallback cache and returns rows + age if within TTL.
+     *
+     * @return array{rows: array<string, string|null>, ageSeconds: int}|null
+     */
+    private function tryReadCache(string $cacheFile, int $ttl): ?array
+    {
+        if (!file_exists($cacheFile)) {
+            return null;
         }
 
-        $this->initialized = true;
+        $raw = file_get_contents($cacheFile);
+        if ($raw === false) {
+            return null;
+        }
+
+        try {
+            $data = json_decode($raw, true, 512, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+
+        if (!isset($data['ts'], $data['rows']) || !is_int($data['ts']) || !is_array($data['rows'])) {
+            return null;
+        }
+
+        $ageSeconds = time() - $data['ts'];
+        if ($ageSeconds > $ttl) {
+            return null;
+        }
+
+        return ['rows' => $data['rows'], 'ageSeconds' => $ageSeconds];
     }
 
     /**

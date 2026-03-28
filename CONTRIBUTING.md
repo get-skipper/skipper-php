@@ -91,6 +91,36 @@ chore: update google/apiclient to ^2.16
 
 ---
 
+## Changelog
+
+This project uses [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format in `CHANGELOG.md`.
+
+Every pull request that changes user-facing behaviour **must** include a `CHANGELOG.md` entry under `[Unreleased]`.
+
+### Categories
+
+| Category | When to use |
+|----------|-------------|
+| `Added` | New features or env vars |
+| `Changed` | Changes to existing behaviour |
+| `Deprecated` | Features that will be removed in a future release |
+| `Removed` | Features removed in this release |
+| `Fixed` | Bug fixes |
+| `Security` | Security-related fixes |
+
+### Example entry
+
+```markdown
+## [Unreleased]
+
+### Added
+- `SKIPPER_FAIL_OPEN` env var: run all tests instead of crashing when the API is unreachable and no cache exists (default: `true`).
+```
+
+Releases are cut by a maintainer: the `[Unreleased]` section is renamed to the new version with its release date, and a new empty `[Unreleased]` section is added at the top.
+
+---
+
 ## Pull requests
 
 1. Fork the repository and create a branch:

@@ -66,6 +66,13 @@ final class SheetsWriter
             fn ($nid) => !isset($normalizedDiscovered[$nid])
         );
 
+        $allowDeletes = getenv('SKIPPER_SYNC_ALLOW_DELETE') === 'true';
+
+        if (!$allowDeletes && !empty($toRemoveNormalized)) {
+            Logger::log('[skipper] ' . count($toRemoveNormalized) . ' orphaned row(s) found. Set SKIPPER_SYNC_ALLOW_DELETE=true to prune them.');
+            $toRemoveNormalized = [];
+        }
+
         if (empty($toAdd) && empty($toRemoveNormalized)) {
             Logger::log('[skipper] Spreadsheet is already up to date.');
             return;
