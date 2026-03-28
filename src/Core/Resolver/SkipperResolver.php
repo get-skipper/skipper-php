@@ -32,8 +32,9 @@ final class SkipperResolver
 
     public function __construct(
         private readonly SkipperConfig $config,
+        ?SheetsClient $client = null,
     ) {
-        $this->client = new SheetsClient($config);
+        $this->client = $client ?? new SheetsClient($config);
     }
 
     /**

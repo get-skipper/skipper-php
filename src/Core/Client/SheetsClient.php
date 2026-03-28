@@ -11,7 +11,7 @@ use GetSkipper\Core\TestId\TestIdHelper;
 use Google\Client as GoogleClient;
 use Google\Service\Sheets as SheetsService;
 
-final class SheetsClient
+class SheetsClient
 {
     public function __construct(
         private readonly SkipperConfig $config,
