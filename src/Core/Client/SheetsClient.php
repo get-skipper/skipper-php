@@ -7,6 +7,7 @@ namespace GetSkipper\Core\Client;
 use GetSkipper\Core\Config\SkipperConfig;
 use GetSkipper\Core\Logger;
 use GetSkipper\Core\Model\TestEntry;
+use GetSkipper\Core\Resolver\DisabledUntilParser;
 use GetSkipper\Core\TestId\TestIdHelper;
 use Google\Client as GoogleClient;
 use Google\Service\Sheets as SheetsService;
@@ -129,23 +130,10 @@ class SheetsClient
                 continue;
             }
 
-            $disabledUntil = null;
-            if ($disabledUntilIdx !== false && isset($row[$disabledUntilIdx]) && $row[$disabledUntilIdx] !== '') {
-                $raw = trim((string) $row[$disabledUntilIdx]);
-                $parsed = \DateTimeImmutable::createFromFormat('Y-m-d', $raw)
-                    ?: \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $raw)
-                    ?: \DateTimeImmutable::createFromFormat('Y-m-d\TH:i:s', $raw)
-                    ?: false;
-
-                if ($parsed !== false) {
-                    $disabledUntil = $parsed;
-                } else {
-                    Logger::warn(
-                        "[skipper] Row " . ($i + 1) . " in \"{$sheetName}\": "
-                        . "invalid date \"{$raw}\" in \"{$disabledUntilCol}\" — treating as enabled"
-                    );
-                }
-            }
+            $rawDate = ($disabledUntilIdx !== false && isset($row[$disabledUntilIdx]) && $row[$disabledUntilIdx] !== '')
+                ? (string) $row[$disabledUntilIdx]
+                : null;
+            $disabledUntil = DisabledUntilParser::parse($rawDate, $i + 1);
 
             $notes = ($notesIdx !== false && isset($row[$notesIdx])) ? (string) $row[$notesIdx] : null;
             $entries[] = new TestEntry($testId, $disabledUntil, $notes);

@@ -144,7 +144,10 @@ final class SkipperResolver
             return true;
         }
 
-        return new \DateTimeImmutable($iso) <= new \DateTimeImmutable();
+        $until = new \DateTimeImmutable($iso);
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+
+        return $now >= $until;
     }
 
     /**
