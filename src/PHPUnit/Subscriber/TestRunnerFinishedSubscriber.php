@@ -9,6 +9,8 @@ use GetSkipper\Core\Config\SkipperConfig;
 use GetSkipper\Core\Logger;
 use GetSkipper\Core\SkipperMode;
 use GetSkipper\Core\Writer\SheetsWriter;
+use GetSkipper\PHPUnit\Report\QuarantineReportEmitter;
+use GetSkipper\PHPUnit\Report\QuarantineReportGenerator;
 use GetSkipper\PHPUnit\SkipperState;
 use PHPUnit\Event\TestRunner\Finished;
 use PHPUnit\Event\TestRunner\FinishedSubscriber;
@@ -24,6 +26,11 @@ final class TestRunnerFinishedSubscriber implements FinishedSubscriber
 
     public function notify(Finished $event): void
     {
+        // Emit quarantine report (only main process, all modes)
+        if ($this->isMainProcess) {
+            $this->emitQuarantineReport();
+        }
+
         // Flush this process's discovered IDs to the shared directory
         $this->state->flushDiscoveredIds();
 
@@ -56,5 +63,18 @@ final class TestRunnerFinishedSubscriber implements FinishedSubscriber
         }
 
         CacheManager::cleanup($dir);
+    }
+
+    private function emitQuarantineReport(): void
+    {
+        try {
+            $generator = new QuarantineReportGenerator($this->state->getResolver());
+            $report = $generator->generate();
+
+            $emitter = new QuarantineReportEmitter();
+            $emitter->emit($report);
+        } catch (\Throwable $e) {
+            fwrite(STDERR, '[skipper] Report generation failed: ' . $e->getMessage() . PHP_EOL);
+        }
     }
 }
