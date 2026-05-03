@@ -11,3 +11,7 @@ service-account-*.json
 # PHPUnit cache
 .phpunit.cache/
 .phpunit.result.cache
+
+# Skipper artifacts
+.skipper-cache.json
+skipper-report.json
