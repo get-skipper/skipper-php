@@ -10,8 +10,10 @@ use GetSkipper\Core\TestId\TestIdHelper;
 use GetSkipper\PHPUnit\SkipperState;
 use PHPUnit\Event\Code\TestDox;
 use PHPUnit\Event\Code\TestMethod;
+use PHPUnit\Event\TestData\DataFromDataProvider;
 use PHPUnit\Event\TestData\TestDataCollection;
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Metadata\Metadata;
 use PHPUnit\Metadata\MetadataCollection;
 
 final class SkipperStateTest extends TestCase
@@ -36,6 +38,73 @@ final class SkipperStateTest extends TestCase
 
         $expected = TestIdHelper::build('tests/Feature/auth.php', ['can login']);
         self::assertSame($expected, $id);
+    }
+
+    public function testBuildsTestIdWithNamedDataSet(): void
+    {
+        $state = new SkipperState(SkipperResolver::fromArray([]), null);
+        $test = $this->makeTestMethod(
+            'App\\Auth\\AuthTest',
+            'testWithDataProvider',
+            'tests/Unit/AuthTest.php',
+            testData: TestDataCollection::fromArray([DataFromDataProvider::from('valid', '', '')]),
+        );
+
+        // README example
+        self::assertSame(
+            'tests/Unit/AuthTest.php > AuthTest > testWithDataProvider with data set "valid"',
+            $state->buildTestId($test),
+        );
+    }
+
+    public function testBuildsTestIdWithNumericDataSet(): void
+    {
+        $state = new SkipperState(SkipperResolver::fromArray([]), null);
+        $test = $this->makeTestMethod(
+            'App\\Auth\\AuthTest',
+            'testWithDataProvider',
+            'tests/Unit/AuthTest.php',
+            testData: TestDataCollection::fromArray([DataFromDataProvider::from(0, '', '')]),
+        );
+
+        self::assertSame(
+            'tests/Unit/AuthTest.php > AuthTest > testWithDataProvider with data set #0',
+            $state->buildTestId($test),
+        );
+    }
+
+    public function testBuildsPestTestIdFromTestDox(): void
+    {
+        $state = new SkipperState(SkipperResolver::fromArray([]), null);
+        $test = $this->makeTestMethod(
+            'P\\Tests\\Feature\\Auth',
+            '__pest_evaluable_can_login',
+            'tests/Feature/auth.php',
+            MetadataCollection::fromArray([Metadata::testDoxOnMethod('can login')]),
+        );
+
+        self::assertSame('tests/Feature/auth.php > can login', $state->buildTestId($test));
+    }
+
+    public function testBuildsPestTestIdWithDescribeBlock(): void
+    {
+        $state = new SkipperState(SkipperResolver::fromArray([]), null);
+        $test = $this->makeTestMethod(
+            'P\\Tests\\Feature\\Auth',
+            '__pest_evaluable__Auth__→_can_login',
+            'tests/Feature/auth.php',
+            MetadataCollection::fromArray([Metadata::testDoxOnMethod('`Auth` → can login')]),
+        );
+
+        self::assertSame('tests/Feature/auth.php > Auth > can login', $state->buildTestId($test));
+    }
+
+    public function testBuildsPestTestIdFromEncodedNameWithoutTestDox(): void
+    {
+        $state = new SkipperState(SkipperResolver::fromArray([]), null);
+        $test = $this->makeTestMethod('P\\Tests\\Feature\\Auth', '__pest_evaluable_can_login', 'tests/Feature/auth.php');
+
+        self::assertSame('tests/Feature/auth.php > can login', $state->buildTestId($test));
     }
 
     public function testBuildsTestIdForNonMethodTestViaId(): void
@@ -78,11 +147,17 @@ final class SkipperStateTest extends TestCase
 
     // ---------- helpers ----------
 
-    private function makeTestMethod(string $className, string $methodName, string $file): TestMethod
-    {
+    private function makeTestMethod(
+        string $className,
+        string $methodName,
+        string $file,
+        ?MetadataCollection $metadata = null,
+        ?TestDataCollection $testData = null,
+    ): TestMethod {
         $testDox = new TestDox($className, $methodName, $methodName);
-        $metadata = MetadataCollection::fromArray([]);
-        $testData = TestDataCollection::fromArray([]);
+        $metadata ??= MetadataCollection::fromArray([]);
+        $testData ??= TestDataCollection::fromArray([]);
+
         return new TestMethod($className, $methodName, $file, 1, $testDox, $metadata, $testData);
     }
 }

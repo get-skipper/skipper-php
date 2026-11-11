@@ -141,28 +141,9 @@ tests/Feature/auth.php > can login
 tests/Feature/auth.php > Auth > can login      ← with describe() block
 ```
 
-**Alternative: hook-based setup via `tests/Pest.php`**
+Tests with a dataset get the same ` with data set ...` suffix PHPUnit uses in its test names.
 
-Use this if you prefer Pest-native configuration instead of `phpunit.xml`:
-
-```php
-<?php
-// tests/Pest.php
-
-use GetSkipper\Core\Config\SkipperConfig;
-use GetSkipper\Core\Credentials\Base64Credentials;
-use GetSkipper\Core\Credentials\FileCredentials;
-use GetSkipper\Pest\Plugin;
-
-// Choose one credentials option:
-Plugin::skipperSetup(new SkipperConfig(
-    spreadsheetId: 'YOUR_SPREADSHEET_ID',
-    credentials: new FileCredentials('./service-account.json'),
-    // credentials: new Base64Credentials('eyJ0eXBlIjoic2VydmljZV9hY2NvdW50Ii4uLn0='),
-    // credentials: new Base64Credentials((string) getenv('GOOGLE_CREDS_B64')),
-    sheetName: 'MySheet', // optional
-));
-```
+There is no Pest-native (`tests/Pest.php`) setup: register the PHPUnit extension in `phpunit.xml`.
 
 ---
 
