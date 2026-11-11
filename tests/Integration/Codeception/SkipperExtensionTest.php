@@ -5,7 +5,13 @@ declare(strict_types=1);
 namespace GetSkipper\Tests\Integration\Codeception;
 
 use Codeception\Events;
+use Codeception\Test\Cest;
+use Codeception\Test\TestCaseWrapper;
+use Codeception\Event\TestEvent;
 use GetSkipper\Codeception\SkipperExtension;
+use GetSkipper\Core\Resolver\SkipperResolver;
+use GetSkipper\Tests\Integration\Codeception\Fixtures\AuthCest;
+use GetSkipper\Tests\Integration\Codeception\Fixtures\AuthFixtureTest;
 use PHPUnit\Framework\TestCase;
 
 final class SkipperExtensionTest extends TestCase
@@ -44,5 +50,43 @@ final class SkipperExtensionTest extends TestCase
     {
         $ext = new SkipperExtension([], []);
         self::assertInstanceOf(SkipperExtension::class, $ext);
+    }
+
+    public function testBuildTestIdForCestUsesUserClass(): void
+    {
+        $test = new Cest(new AuthCest(), 'tryToLogin', 'tests/Acceptance/AuthCest.php');
+
+        self::assertSame('tests/Acceptance/AuthCest.php > AuthCest > tryToLogin', $this->buildTestId($test));
+    }
+
+    public function testBuildTestIdForUnitTestUnwrapsTestCaseWrapper(): void
+    {
+        $test = new TestCaseWrapper(new AuthFixtureTest('testItCanLogin'));
+
+        self::assertStringEndsWith(
+            'Fixtures/AuthFixtureTest.php > AuthFixtureTest > testItCanLogin',
+            $this->buildTestId($test),
+        );
+    }
+
+    public function testBeforeTestMarksDisabledTestAsSkippedViaMetadata(): void
+    {
+        $ext = new SkipperExtension([], []);
+        $resolver = SkipperResolver::fromArray([
+            'tests/acceptance/authcest.php > authcest > trytologin' => (new \DateTimeImmutable('+1 year'))->format(\DateTimeInterface::ATOM),
+        ]);
+        (new \ReflectionProperty(SkipperExtension::class, 'resolver'))->setValue($ext, $resolver);
+        $test = new Cest(new AuthCest(), 'tryToLogin', 'tests/Acceptance/AuthCest.php');
+
+        $ext->beforeTest(new TestEvent($test));
+
+        self::assertStringStartsWith('[skipper] Test disabled until', (string) $test->getMetadata()->getSkip());
+    }
+
+    private function buildTestId(object $test): string
+    {
+        $method = new \ReflectionMethod(SkipperExtension::class, 'buildTestId');
+
+        return $method->invoke(new SkipperExtension([], []), $test);
     }
 }

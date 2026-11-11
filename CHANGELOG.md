@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-11
+
+### Changed
+- `SkipperResolver::initialize()` now returns where the entries came from: `SkipperResolver::SOURCE_API`, `SOURCE_CACHE` or `SOURCE_FAIL_OPEN`.
+- **testIds changed** for PHPUnit data-provider tests, Pest tests and Codeception tests (see Fixed). Rows created by `SKIPPER_MODE=sync` with the old format become orphans; the next sync adds rows in the documented format.
+
+### Fixed
+- "Spreadsheet loaded" is logged only when the spreadsheet was actually fetched, not after a cache or fail-open fallback (#4).
+- Cache and fail-open warnings are written to stderr instead of `error_log()`, so they reach the test output even when an `error_log` file is configured (#4).
+- PHPUnit: data-provider tests get the documented ` with data set "..."` suffix (#5).
+- Pest: testIds use the test description (`tests/Feature/auth.php > Auth > can login`) instead of the encoded `__pest_evaluable_...` method name (#5).
+- Codeception: testIds use the user's class (`AuthCest`, `AuthTest`) instead of Codeception's `Cest` / `TestCaseWrapper` wrapper (#7).
+- Codeception: disabled tests are now reported as skipped instead of as errors.
+
+### Removed
+- `GetSkipper\Pest\Plugin::skipperSetup()`: it relied on APIs that do not exist in Pest 2/3 and could not work. Register the PHPUnit extension in `phpunit.xml` instead (#6).
+
 ## [1.3.0] - 2026-05-03
 
 ### Added
@@ -50,7 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Parallel test execution support via cross-process resolver cache (`SKIPPER_CACHE_FILE`, `SKIPPER_DISCOVERED_DIR`).
 - Three credential formats: file path, base64 string, environment variable.
 
-[Unreleased]: https://github.com/get-skipper/skipper-php/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/get-skipper/skipper-php/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/get-skipper/skipper-php/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/get-skipper/skipper-php/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/get-skipper/skipper-php/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/get-skipper/skipper-php/compare/v1.1.0...v1.1.1

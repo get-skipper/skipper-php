@@ -92,22 +92,14 @@ final class SkipperExtension extends Extension
             $disabledUntil = $this->resolver->getDisabledUntil($testId);
             $message = '[skipper] Test disabled' . ($disabledUntil !== null ? " until {$disabledUntil}" : '') . '.';
 
-            // PHPUnit-based tests (Unit suite)
-            if ($test instanceof \PHPUnit\Framework\TestCase) {
-                throw new \PHPUnit\Framework\SkippedWithMessageException($message);
+            // TEST_BEFORE fires before Codeception checks the metadata, so the test is
+            // reported as skipped. Throwing here would be reported as an error instead.
+            if (method_exists($test, 'getMetadata')) {
+                $test->getMetadata()->setSkip($message);
+                return;
             }
 
-            // Cest-based tests (Acceptance/Functional suites)
-            if (method_exists($test, 'getScenario')) {
-                $scenario = $test->getScenario();
-                if (method_exists($scenario, 'skip')) {
-                    $scenario->skip($message);
-                    return;
-                }
-            }
-
-            // Fallback: mark test as incomplete
-            throw new \PHPUnit\Framework\IncompleteTestError($message);
+            throw new \PHPUnit\Framework\SkippedWithMessageException($message);
         }
     }
 
@@ -171,12 +163,21 @@ final class SkipperExtension extends Extension
         $file = '';
         $titlePath = [];
 
+        // Codeception 5 fires events with its own wrappers: unwrap to the user's class.
+        if ($test instanceof \Codeception\Test\TestCaseWrapper) {
+            $test = $test->getTestCase();
+        }
+
         if ($test instanceof \PHPUnit\Framework\TestCase) {
-            $file = (new \ReflectionClass($test))->getFileName() ?: '';
-            $shortClass = (new \ReflectionClass($test))->getShortName();
-            $titlePath = [$shortClass, $test->getName(false)];
+            $reflection = new \ReflectionClass($test);
+            $file = $reflection->getFileName() ?: '';
+            // ' with data set "..."' suffix, as in the PHPUnit integration
+            $titlePath = [$reflection->getShortName(), $test->nameWithDataSet()];
+        } elseif ($test instanceof \Codeception\Test\Cest) {
+            $file = $test->getMetadata()->getFilename() ?? '';
+            $titlePath = [(new \ReflectionClass($test->getTestInstance()))->getShortName(), $test->getTestMethod()];
         } elseif (method_exists($test, 'getScenario') && method_exists($test, 'getMetadata')) {
-            // Cest test
+            // Other scenario-based tests (e.g. Gherkin)
             $metadata = $test->getMetadata();
             $file = $metadata->getFilename() ?? '';
             $shortClass = basename(str_replace('\\', '/', get_class($test)));
