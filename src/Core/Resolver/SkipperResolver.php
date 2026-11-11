@@ -27,6 +27,10 @@ final class SkipperResolver
      * @var array<string, string|null>
      */
     private array $cache = [];
+    public const SOURCE_API = 'api';
+    public const SOURCE_CACHE = 'cache';
+    public const SOURCE_FAIL_OPEN = 'fail-open';
+
     private bool $initialized = false;
     private readonly SheetsClient $client;
 
@@ -46,8 +50,10 @@ final class SkipperResolver
      * - If no valid cache exists and SKIPPER_FAIL_OPEN is not "false", runs all tests
      *   instead of crashing (fail-open is the default).
      * - If SKIPPER_FAIL_OPEN=false, the exception is rethrown.
+     *
+     * @return self::SOURCE_* where the entries came from; only SOURCE_API means the sheet was fetched
      */
-    public function initialize(): void
+    public function initialize(): string
     {
         $cacheFile = '.skipper-cache.json';
         $ttl = (int)(getenv('SKIPPER_CACHE_TTL') ?: 300);
@@ -64,22 +70,32 @@ final class SkipperResolver
 
             file_put_contents($cacheFile, json_encode(['ts' => time(), 'rows' => $this->cache], \JSON_THROW_ON_ERROR));
             $this->initialized = true;
+
+            return self::SOURCE_API;
         } catch (\Exception $e) {
             $cached = $this->tryReadCache($cacheFile, $ttl);
             if ($cached !== null) {
-                error_log('[skipper] API failed, using cache (' . $cached['ageSeconds'] . 's old): ' . $e->getMessage());
+                self::warn('API failed, using cache (' . $cached['ageSeconds'] . 's old): ' . $e->getMessage());
                 $this->cache = $cached['rows'];
                 $this->initialized = true;
-                return;
+
+                return self::SOURCE_CACHE;
             }
             if ($failOpen) {
-                error_log('[skipper] API failed, no cache — running all tests (fail-open): ' . $e->getMessage());
+                self::warn('API failed, no cache — running all tests (fail-open): ' . $e->getMessage());
                 $this->cache = [];
                 $this->initialized = true;
-                return;
+
+                return self::SOURCE_FAIL_OPEN;
             }
             throw $e;
         }
+    }
+
+    /** Always printed (not only with SKIPPER_DEBUG) and to stderr, not error_log: it changes which tests run. */
+    private static function warn(string $message): void
+    {
+        file_put_contents('php://stderr', '[skipper] ' . $message . \PHP_EOL);
     }
 
     /**

@@ -61,13 +61,15 @@ final class SkipperExtension extends Extension
         if ($this->isMainProcess) {
             $this->skipperConfig = $this->buildConfig();
             $resolver = new SkipperResolver($this->skipperConfig);
-            $resolver->initialize();
+            $source = $resolver->initialize();
 
             $dir = CacheManager::writeResolverCache($resolver->toArray());
             $cacheFile = $dir . '/cache.json';
             putenv("SKIPPER_CACHE_FILE={$cacheFile}");
             putenv("SKIPPER_DISCOVERED_DIR={$dir}");
-            Logger::log('[skipper] Spreadsheet loaded and cache written.');
+            if ($source === SkipperResolver::SOURCE_API) {
+                Logger::log('[skipper] Spreadsheet loaded and cache written.');
+            }
             $this->resolver = $resolver;
         } else {
             $data = CacheManager::readResolverCache($cacheFile);

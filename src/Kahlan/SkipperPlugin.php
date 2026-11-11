@@ -60,13 +60,15 @@ final class SkipperPlugin
             self::$resolver = SkipperResolver::fromArray(CacheManager::readResolverCache($cacheFile));
         } else {
             $resolver = new SkipperResolver($config);
-            $resolver->initialize();
+            $source = $resolver->initialize();
             self::$resolver = $resolver;
 
             $dir = CacheManager::writeResolverCache($resolver->toArray());
             putenv("SKIPPER_CACHE_FILE={$dir}/cache.json");
             putenv("SKIPPER_DISCOVERED_DIR={$dir}");
-            Logger::log('[skipper] Spreadsheet loaded and cache written.');
+            if ($source === SkipperResolver::SOURCE_API) {
+                Logger::log('[skipper] Spreadsheet loaded and cache written.');
+            }
         }
 
         // Register afterAll for sync mode

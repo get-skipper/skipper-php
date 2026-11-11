@@ -52,7 +52,7 @@ final class SkipperExtension implements Extension
         if ($isMainProcess) {
             // Main process: fetch from Google Sheets and write cache
             $resolver = new SkipperResolver($config);
-            $resolver->initialize();
+            $source = $resolver->initialize();
 
             $discoveredDir = CacheManager::writeResolverCache($resolver->toArray());
             $cacheFile = $discoveredDir . '/cache.json';
@@ -60,7 +60,9 @@ final class SkipperExtension implements Extension
             putenv("SKIPPER_CACHE_FILE={$cacheFile}");
             putenv("SKIPPER_DISCOVERED_DIR={$discoveredDir}");
 
-            Logger::log('[skipper] Spreadsheet loaded and cache written.');
+            if ($source === SkipperResolver::SOURCE_API) {
+                Logger::log('[skipper] Spreadsheet loaded and cache written.');
+            }
         } else {
             // Worker process: rehydrate from cache file
             $data = CacheManager::readResolverCache($cacheFile);

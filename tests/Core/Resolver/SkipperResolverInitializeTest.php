@@ -98,7 +98,7 @@ final class SkipperResolverInitializeTest extends TestCase
         $resolver = $this->makeResolver($this->makeSucceedingClient([$entry]));
 
         self::assertFileDoesNotExist(self::CACHE_FILE);
-        $resolver->initialize();
+        self::assertSame(SkipperResolver::SOURCE_API, $resolver->initialize());
 
         self::assertFileExists(self::CACHE_FILE);
         /** @var array{ts: int, rows: array<string, string|null>} $data */
@@ -113,7 +113,7 @@ final class SkipperResolverInitializeTest extends TestCase
         // SKIPPER_FAIL_OPEN defaults to true — no cache file exists
         $resolver = $this->makeResolver($this->makeFailingClient(new \RuntimeException('API down')));
 
-        $resolver->initialize();
+        self::assertSame(SkipperResolver::SOURCE_FAIL_OPEN, $resolver->initialize());
 
         // Empty cache → every test runs
         self::assertTrue($resolver->isTestEnabled('tests/AnyTest.php > Any > testAnything'));
@@ -139,7 +139,7 @@ final class SkipperResolverInitializeTest extends TestCase
         );
 
         $resolver = $this->makeResolver($this->makeFailingClient(new \RuntimeException('API down')));
-        $resolver->initialize();
+        self::assertSame(SkipperResolver::SOURCE_CACHE, $resolver->initialize());
 
         // Cached entry marks testA as disabled
         self::assertFalse($resolver->isTestEnabled('tests/FooTest.php > Foo > testA'));
